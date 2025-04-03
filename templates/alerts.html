@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+    <!-- Sidebar (same as dashboard) -->
+    <div class="bg-indigo-700 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out">
+        <!-- Sidebar content same as dashboard.html -->
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Navigation (same as dashboard) -->
+        <header class="bg-white shadow-sm z-10">
+            <!-- Header content same as dashboard.html -->
+        </header>
+
+        <!-- Page Content -->
+        <main class="flex-1 overflow-y-auto p-4">
+            <div class="py-6">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center">
+                        <h1 class="text-2xl font-semibold text-gray-900">Compliance Alerts</h1>
+                        <div class="flex space-x-2">
+                            <select id="severityFilter" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="all">All Severities</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                            <select id="statusFilter" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="all">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+                    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Message
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Severity
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Host
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Time
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="alertsTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Alerts will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Alert Details Modal -->
+<div id="alertDetailsModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+    <div class="relative top-20 mx-auto p-5 border w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Alert Details</h3>
+            <button id="closeDetailsModalBtn" class="text-gray-400 hover:text-gray-500">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="alertDetailsContent" class="space-y-4">
+            <!-- Details will be populated here -->
+        </div>
+        <div class="mt-6 flex justify-end">
+            <button id="resolveAlertBtn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Mark as Resolved
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// DOM elements
+const severityFilter = document.getElementById('severityFilter');
+const statusFilter = document.getElementById('statusFilter');
+const alertsTableBody = document.getElementById('alertsTableBody');
+const alertDetailsModal = document.getElementById('alertDetailsModal');
+const closeDetailsModalBtn = document.getElementById('closeDetailsModalBtn');
+const alertDetailsContent = document.getElementById('alertDetailsContent');
+const resolveAlertBtn = document.getElementById('resolveAlertBtn');
+
+// Current alert details
+let currentAlertId = null;
+
+// Modal control functions
+function openAlertDetails(alert) {
+    currentAlertId = alert.id;
+    alertDetailsContent.innerHTML = `
+        <div>
+            <h4 class="text-sm font-medium text-gray-500">Message</h4>
+            <p class="mt-1 text-sm text-gray-900">${alert.message}</p>
+        </div>
+        <div>
+            <h4 class="text-sm font-medium text-gray-500">Severity</h4>
+            <p class="mt-1 text-sm text-gray-900">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                    ${alert.severity === 'high' ? 'bg-red-100 text-red-800' : 
+                      alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' : 
+                      'bg-green-100 text-green-800'}">
+                    ${alert.severity}
+                </span>
+            </p>
+        </div>
+        <div>
+            <h4 class="text-sm font-medium text-gray-500">Host</h4>
+            <p class="mt-1 text-sm text-gray-900">${alert.scan_result.hostname}</p>
+        </div>
+        <div>
+            <h4 class="text-sm font-medium text-gray-500">Time</h4>
+            <p class="mt-1 text-sm text-gray-900">${new Date(alert.created_at).toLocaleString()}</p>
+        </div>
+        <div>
+            <h4 class="text-sm font-medium text-gray-500">Non-Compliant Software</h4>
+            <ul class="mt-1 text-sm text-gray-900 list-disc list-inside">
+                ${alert.scan_result.compliance_status.non_compliant.map(item => `
+                    <li>${item.name} (${item.path})</li>
+                `).join('')}
+            </ul>
+        </div>
+    `;
+    
+    // Show/hide resolve button based on alert status
+    resolveAlertBtn.style.display = alert.resolved ? 'none' : 'inline-flex';
+    alertDetailsModal.classList.remove('hidden');
+}
+
+function closeAlertDetails() {
+    alertDetailsModal.classList.add('hidden');
+}
+
+// Event listeners
+closeDetailsModalBtn.addEventListener('click', closeAlertDetails);
+severityFilter.addEventListener('change', loadAlerts);
+statusFilter.addEventListener('change', loadAlerts);
+
+// Load alerts data
+async function loadAlerts() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const severity = severityFilter.value;
+        const status = statusFilter.value;
+        
+        let url = '/api/alerts?days=30';
+        if (severity !== 'all') url += `&severity=${severity}`;
+        if (status !== 'all') url += `&resolved=${status === 'resolved'}`;
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const alerts = await response.json();
+            renderAlertsTable(alerts);
+        }
+    } catch (error) {
+        console.error('Error loading alerts:', error);
+    }
+}
+
+// Render alerts table
+function renderAlertsTable(alerts) {
+    alertsTableBody.innerHTML = alerts.map(alert => `
+        <tr class="${alert.resolved ? 'bg-gray-50' : ''}">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                ${alert.message}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                    ${alert.severity === 'high' ? 'bg-red-100 text-red-800' : 
+                      alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' : 
+                      'bg-green-100 text-green-800'}">
+                    ${alert.severity}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${alert.scan_result.hostname}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${new Date(alert.created_at).toLocaleString()}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${alert.resolved ? 'Resolved' : 'Active'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="viewAlertDetails('${alert.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${!alert.resolved ? `
+                <button onclick="resolveAlert('${alert.id}')" class="text-green-600 hover:text-green-900">
+                    <i class="fas fa-check"></i>
+                </button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// View alert details
+window.viewAlertDetails = async (alertId) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/alerts/${alertId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const alert = await response.json();
+            openAlertDetails(alert);
+        }
+    } catch (error) {
+        console.error('Error fetching alert:', error);
+    }
+};
+
+// Resolve alert
+window.resolveAlert = async (alertId) => {
+    if (!confirm('Are you sure you want to mark this alert as resolved?')) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/alerts/${alertId}/resolve`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            loadAlerts();
+        } else {
+            const error = await response.json();
+            alert(error.message || 'Error resolving alert');
+        }
+    } catch (error) {
+        console.error('Error resolving alert:', error);
+        alert('Error resolving alert');
+    }
+};
+
+// Resolve alert from modal
+resolveAlertBtn.addEventListener('click', async () => {
+    if (!currentAlertId) return;
+    await resolveAlert(currentAlertId);
+    closeAlertDetails();
+});
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if user is admin
+    const token = localStorage.getItem('token');
+    if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.role !== 'admin') {
+            window.location.href = '/dashboard';
+        }
+    } else {
+        window.location.href = '/login';
+    }
+    
+    loadAlerts();
+});
+</script>
+{% endblock %}
