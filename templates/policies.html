@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+    <!-- Sidebar (same as dashboard) -->
+    <div class="bg-indigo-700 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out">
+        <!-- Sidebar content same as dashboard.html -->
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Navigation (same as dashboard) -->
+        <header class="bg-white shadow-sm z-10">
+            <!-- Header content same as dashboard.html -->
+        </header>
+
+        <!-- Page Content -->
+        <main class="flex-1 overflow-y-auto p-4">
+            <div class="py-6">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center">
+                        <h1 class="text-2xl font-semibold text-gray-900">Compliance Policies</h1>
+                        <button id="addPolicyBtn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <i class="fas fa-plus mr-2"></i> Add Policy
+                        </button>
+                    </div>
+                </div>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-5">
+                    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Policy Name
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Description
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Last Updated
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="policiesTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Policies will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Add/Edit Policy Modal -->
+<div id="policyModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+    <div class="relative top-20 mx-auto p-5 border w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-medium text-gray-900" id="modalTitle">Add New Policy</h3>
+            <button id="closeModalBtn" class="text-gray-400 hover:text-gray-500">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="policyForm">
+            <input type="hidden" id="policyId">
+            <div class="mb-4">
+                <label for="policyName" class="block text-sm font-medium text-gray-700">Policy Name</label>
+                <input type="text" id="policyName" name="policyName" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+            </div>
+            <div class="mb-4">
+                <label for="policyDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="policyDescription" name="policyDescription" rows="3" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="policyRules" class="block text-sm font-medium text-gray-700">Compliance Rules (JSON)</label>
+                <textarea id="policyRules" name="policyRules" rows="6" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md font-mono text-sm"></textarea>
+                <p class="mt-2 text-sm text-gray-500">Example: {"allowed": ["chrome", "firefox"], "blocked": ["torrent", "vpn"]}</p>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button" id="cancelPolicyBtn" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Cancel
+                </button>
+                <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Save Policy
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// DOM elements
+const addPolicyBtn = document.getElementById('addPolicyBtn');
+const policyModal = document.getElementById('policyModal');
+const closeModalBtn = document.getElementById('closeModalBtn');
+const cancelPolicyBtn = document.getElementById('cancelPolicyBtn');
+const policyForm = document.getElementById('policyForm');
+const policiesTableBody = document.getElementById('policiesTableBody');
+
+// Modal control functions
+function openModal(policy = null) {
+    if (policy) {
+        document.getElementById('modalTitle').textContent = 'Edit Policy';
+        document.getElementById('policyId').value = policy.id;
+        document.getElementById('policyName').value = policy.name;
+        document.getElementById('policyDescription').value = policy.description;
+        document.getElementById('policyRules').value = JSON.stringify(policy.rules, null, 2);
+    } else {
+        document.getElementById('modalTitle').textContent = 'Add New Policy';
+        document.getElementById('policyId').value = '';
+        document.getElementById('policyName').value = '';
+        document.getElementById('policyDescription').value = '';
+        document.getElementById('policyRules').value = '{"allowed": [], "blocked": []}';
+    }
+    policyModal.classList.remove('hidden');
+}
+
+function closeModal() {
+    policyModal.classList.add('hidden');
+}
+
+// Event listeners
+addPolicyBtn.addEventListener('click', () => openModal());
+closeModalBtn.addEventListener('click', closeModal);
+cancelPolicyBtn.addEventListener('click', closeModal);
+
+// Load policies data
+async function loadPolicies() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const response = await fetch('/api/policies', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const policies = await response.json();
+            renderPoliciesTable(policies);
+        }
+    } catch (error) {
+        console.error('Error loading policies:', error);
+    }
+}
+
+// Render policies table
+function renderPoliciesTable(policies) {
+    policiesTableBody.innerHTML = policies.map(policy => `
+        <tr>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                ${policy.name}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">
+                ${policy.description || 'N/A'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${new Date(policy.created_at).toLocaleDateString()}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="editPolicy('${policy.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deletePolicy('${policy.id}')" class="text-red-600 hover:text-red-900">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Form submission
+policyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const policyId = document.getElementById('policyId').value;
+    const policyData = {
+        name: document.getElementById('policyName').value,
+        description: document.getElementById('policyDescription').value,
+        rules: JSON.parse(document.getElementById('policyRules').value)
+    };
+
+    try {
+        const token = localStorage.getItem('token');
+        const url = policyId ? `/api/policies/${policyId}` : '/api/policies';
+        const method = policyId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(policyData)
+        });
+
+        if (response.ok) {
+            closeModal();
+            loadPolicies();
+        } else {
+            const error = await response.json();
+            alert(error.message || 'Error saving policy');
+        }
+    } catch (error) {
+        console.error('Error saving policy:', error);
+        alert('Error saving policy');
+    }
+});
+
+// Edit policy
+window.editPolicy = async (policyId) => {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/policies/${policyId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const policy = await response.json();
+            openModal(policy);
+        }
+    } catch (error) {
+        console.error('Error fetching policy:', error);
+    }
+};
+
+// Delete policy
+window.deletePolicy = async (policyId) => {
+    if (!confirm('Are you sure you want to delete this policy?')) return;
+    
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`/api/policies/${policyId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            loadPolicies();
+        } else {
+            const error = await response.json();
+            alert(error.message || 'Error deleting policy');
+        }
+    } catch (error) {
+        console.error('Error deleting policy:', error);
+        alert('Error deleting policy');
+    }
+};
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if user is admin
+    const token = localStorage.getItem('token');
+    if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.role !== 'admin') {
+            window.location.href = '/dashboard';
+        }
+    } else {
+        window.location.href = '/login';
+    }
+    
+    loadPolicies();
+});
+</script>
+{% endblock %}
