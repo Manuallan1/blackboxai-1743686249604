@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex h-screen bg-gray-100">
+    <!-- Sidebar -->
+    <div class="bg-indigo-700 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out">
+        <div class="flex items-center space-x-2 px-4">
+            <i class="fas fa-shield-alt text-2xl"></i>
+            <span class="text-xl font-bold">Compliance</span>
+        </div>
+        <nav>
+            <a href="/dashboard" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-600">
+                <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+            </a>
+            <a href="/policies" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-600">
+                <i class="fas fa-file-contract mr-2"></i>Policies
+            </a>
+            <a href="/alerts" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-600">
+                <i class="fas fa-bell mr-2"></i>Alerts
+            </a>
+            <a href="/reports" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-600">
+                <i class="fas fa-chart-bar mr-2"></i>Reports
+            </a>
+            <a href="/settings" class="block py-2.5 px-4 rounded transition duration-200 hover:bg-indigo-600">
+                <i class="fas fa-cog mr-2"></i>Settings
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Navigation -->
+        <header class="bg-white shadow-sm z-10">
+            <div class="flex items-center justify-between h-16 px-4">
+                <div class="flex items-center">
+                    <button id="sidebarToggle" class="md:hidden text-gray-500 focus:outline-none">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <button id="notificationsButton" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-bell"></i>
+                            <span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <button id="userMenuButton" class="flex items-center space-x-2 focus:outline-none">
+                            <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+                                {{ current_user.email[0].upper() }}
+                            </div>
+                            <span class="text-sm font-medium">{{ current_user.email }}</span>
+                        </button>
+                        <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20">
+                            <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                            <a href="/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sign out</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="flex-1 overflow-y-auto p-4">
+            <div class="py-6">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
+                </div>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <!-- Stats Cards -->
+                    <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+                                        <i class="fas fa-check-circle text-white"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dt class="text-sm font-medium text-gray-500 truncate">
+                                            Compliant Systems
+                                        </dt>
+                                        <dd class="flex items-baseline">
+                                            <div class="text-2xl font-semibold text-gray-900" id="compliantCount">0</div>
+                                        </dd>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-red-500 rounded-md p-3">
+                                        <i class="fas fa-exclamation-triangle text-white"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dt class="text-sm font-medium text-gray-500 truncate">
+                                            Non-Compliant Systems
+                                        </dt>
+                                        <dd class="flex items-baseline">
+                                            <div class="text-2xl font-semibold text-gray-900" id="nonCompliantCount">0</div>
+                                        </dd>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
+                                        <i class="fas fa-bell text-white"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dt class="text-sm font-medium text-gray-500 truncate">
+                                            Active Alerts
+                                        </dt>
+                                        <dd class="flex items-baseline">
+                                            <div class="text-2xl font-semibold text-gray-900" id="activeAlertsCount">0</div>
+                                        </dd>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Alerts -->
+                    <div class="mt-8">
+                        <h2 class="text-lg font-medium text-gray-900 mb-4">Recent Alerts</h2>
+                        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Message
+                                        </th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Severity
+                                        </th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Time
+                                        </th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alertsTableBody" class="bg-white divide-y divide-gray-200">
+                                    <!-- Alerts will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+// Toggle mobile sidebar
+document.getElementById('sidebarToggle').addEventListener('click', () => {
+    document.querySelector('.transform').classList.toggle('-translate-x-full');
+});
+
+// Toggle user menu
+document.getElementById('userMenuButton').addEventListener('click', () => {
+    document.getElementById('userMenu').classList.toggle('hidden');
+});
+
+// Close menus when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#userMenuButton')) {
+        document.getElementById('userMenu').classList.add('hidden');
+    }
+});
+
+// Load dashboard data
+async function loadDashboardData() {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        // Fetch stats
+        const statsResponse = await fetch('/api/reports/summary?days=1', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (statsResponse.ok) {
+            const stats = await statsResponse.json();
+            document.getElementById('compliantCount').textContent = stats.compliant_count;
+            document.getElementById('nonCompliantCount').textContent = stats.non_compliant_count;
+        }
+
+        // Fetch recent alerts
+        const alertsResponse = await fetch('/api/alerts?days=1', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (alertsResponse.ok) {
+            const alerts = await alertsResponse.json();
+            document.getElementById('activeAlertsCount').textContent = alerts.length;
+            
+            const alertsTable = document.getElementById('alertsTableBody');
+            alertsTable.innerHTML = alerts.map(alert => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${alert.message}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${alert.severity === 'high' ? 'bg-red-100 text-red-800' : 
+                              alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' : 
+                              'bg-green-100 text-green-800'}">
+                            ${alert.severity}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${new Date(alert.created_at).toLocaleString()}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${alert.resolved ? 'Resolved' : 'Active'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+// Load data when page loads
+document.addEventListener('DOMContentLoaded', loadDashboardData);
+</script>
+{% endblock %}
